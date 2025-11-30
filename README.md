@@ -10,5 +10,5 @@ Projects will vary in scope and topic, but may include:
 - Exercises focused on logic and problem solving
 - Experiments with machine learning
   
-Notes
+Notes:
 This repository will grow over time as I continue learning and building. It's a reflection of my progress and a place to share what I'm working on.
