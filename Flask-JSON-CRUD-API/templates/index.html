@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Contacts Client (Flask API)</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    h1 { margin: 0 0 12px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
+    input { padding: 10px; font-size: 14px; }
+    button { padding: 10px 12px; font-size: 14px; cursor: pointer; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin: 12px 0; }
+    .muted { color: #666; font-size: 12px; }
+    .list { margin-top: 16px; }
+    .contact { display: grid; grid-template-columns: 60px 1fr 1fr auto auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid #eee; }
+    .contact:first-child { border-top: none; }
+    .contact input { width: 100%; }
+    .error { color: #b00020; }
+    .ok { color: #0a7b2a; }
+    code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Contacts</h1>
+  <div class="muted">
+    API base: <code id="baseLabel"></code>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 10px;">Add Contact</h2>
+    <div class="row">
+      <div>
+        <label class="muted">Name</label><br />
+        <input id="newName" type="text" placeholder="Alice Johnson" />
+      </div>
+      <div>
+        <label class="muted">Phone</label><br />
+        <input id="newPhone" type="text" placeholder="555-123-4567" />
+      </div>
+      <button id="addBtn">Add</button>
+    </div>
+    <div id="addMsg" class="muted" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 10px;">Contacts List</h2>
+    <button id="refreshBtn">Refresh</button>
+    <div id="msg" class="muted" style="margin-top:10px;"></div>
+    <div id="list" class="list"></div>
+  </div>
+
+<script>
+  // Change if your Flask server runs on a different host/port
+  const API_BASE = "http://127.0.0.1:5000";
+
+  document.getElementById("baseLabel").textContent = API_BASE;
+
+  const elList = document.getElementById("list");
+  const elMsg = document.getElementById("msg");
+  const elAddMsg = document.getElementById("addMsg");
+
+  function setMsg(text, kind="muted") {
+    elMsg.className = kind;
+    elMsg.textContent = text;
+  }
+
+  function setAddMsg(text, kind="muted") {
+    elAddMsg.className = kind;
+    elAddMsg.textContent = text;
+  }
+
+  async function apiGet(path) {
+    const res = await fetch(API_BASE + path);
+    const data = await res.json().catch(() => null);
+    return { res, data };
+  }
+
+  async function apiSend(path, method, bodyObj) {
+    const res = await fetch(API_BASE + path, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bodyObj),
+    });
+    const data = await res.json().catch(() => null);
+    return { res, data };
+  }
+
+  function renderContacts(contacts) {
+    console.log("Rendering contacts:", contacts);
+    elList.innerHTML = "";
+    if (!Array.isArray(contacts) || contacts.length === 0) {
+      elList.innerHTML = `<div class="muted">No contacts found.</div>`;
+      return;
+    }
+
+    for (const c of contacts) {
+      const row = document.createElement("div");
+      row.className = "contact";
+      row.dataset.id = c.id;
+
+      row.innerHTML = `
+        <div class="muted">#${c.id}</div>
+        <input class="name" type="text" value="${escapeHtml(c.name ?? "")}" />
+        <input class="phone" type="text" value="${escapeHtml(c.phone ?? "")}" />
+        <button class="save">Save</button>
+        <button class="del">Delete</button>
+      `;
+
+      row.querySelector(".save").addEventListener("click", async () => {
+        const id = c.id;
+        const name = row.querySelector(".name").value.trim();
+        const phone = row.querySelector(".phone").value.trim();
+
+        if (!name || !phone) {
+          setMsg("Name and phone cannot be empty.", "error");
+          return;
+        }
+
+        const { res, data } = await apiSend(`/contacts/${id}`, "PUT", { name, phone });
+        if (res.ok) {
+          setMsg(`Updated contact #${id}.`, "ok");
+          await loadAll();
+        } else {
+          setMsg(data?.error ? `Error: ${data.error}` : `Update failed (HTTP ${res.status}).`, "error");
+        }
+      });
+
+      row.querySelector(".del").addEventListener("click", async () => {
+        const id = c.id;
+        const res = await fetch(API_BASE + `/contacts/${id}`, { method: "DELETE" });
+        const data = await res.json().catch(() => null);
+        if (res.ok) {
+          setMsg(`Deleted contact #${id}.`, "ok");
+          await loadAll();
+        } else {
+          setMsg(data?.error ? `Error: ${data.error}` : `Delete failed (HTTP ${res.status}).`, "error");
+        }
+      });
+
+      elList.appendChild(row);
+    }
+  }
+
+  async function loadAll() {
+    setMsg("Loading...", "muted");
+    const { res, data } = await apiGet("/contacts");
+    if (res.ok) {
+      setMsg(`Loaded ${Array.isArray(data) ? data.length : 0} contacts.`, "muted");
+      renderContacts(data);
+    } else {
+      setMsg(data?.error ? `Error: ${data.error}` : `Load failed (HTTP ${res.status}).`, "error");
+      elList.innerHTML = "";
+    }
+  }
+
+  document.getElementById("refreshBtn").addEventListener("click", loadAll);
+
+  document.getElementById("addBtn").addEventListener("click", async () => {
+    const name = document.getElementById("newName").value.trim();
+    const phone = document.getElementById("newPhone").value.trim();
+
+    if (!name || !phone) {
+      setAddMsg("Name and phone are required.", "error");
+      return;
+    }
+
+    setAddMsg("Creating...", "muted");
+    const { res, data } = await apiSend("/contacts", "POST", { name, phone });
+
+    if (res.status === 201) {
+      setAddMsg(`Created contact #${data?.id}.`, "ok");
+      document.getElementById("newName").value = "";
+      document.getElementById("newPhone").value = "";
+      await loadAll();
+    } else {
+      setAddMsg(data?.error ? `Error: ${data.error}` : `Create failed (HTTP ${res.status}).`, "error");
+    }
+  });
+
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  // Initial load
+  loadAll();
+</script>
+</body>
+</html>
