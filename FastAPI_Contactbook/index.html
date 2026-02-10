@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacts</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="grain-overlay"></div>
+
+    <main class="journal-container">
+        <aside class="sidebar">
+            <div class="profile-header">
+                <div class="avatar-circle">
+                    <span>Me</span>
+                </div>
+                <div>
+                    <h1>My People</h1>
+                    <div class="status-pill" id="connectionStatus">
+                        <span class="dot"></span> Connecting...
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-wrapper">
+                <input type="text" id="searchInput" placeholder="Search friends..." autocomplete="off">
+                <span class="search-icon">Search</span>
+            </div>
+
+            <button class="add-btn" onclick="openModal()">
+                <span>+</span> Add New Contact
+            </button>
+        </aside>
+
+        <section class="content-area">
+            <div class="list-scroll" id="contactList">
+                </div>
+        </section>
+    </main>
+
+    <div class="modal-overlay" id="contactModal">
+        <div class="modal-card">
+            <h2 id="modalTitle">New Entry</h2>
+            <form id="contactForm">
+                <input type="hidden" id="contactId">
+
+                <div class="input-group">
+                    <label>Name</label>
+                    <input type="text" id="nameInput" required placeholder="Ex: Sarah J.">
+                </div>
+
+                <div class="input-group">
+                    <label>Phone</label>
+                    <input type="text" id="phoneInput" required placeholder="(555) 123-4567">
+                </div>
+
+                <div class="input-group">
+                    <label>Email <span style="font-weight:400; opacity:0.5;">(Optional)</span></label>
+                    <input type="email" id="emailInput" placeholder="sarah@mail.com">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeModal()">Nevermind</button>
+                    <button type="submit" class="save-btn">Save Entry</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

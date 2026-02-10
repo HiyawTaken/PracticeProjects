@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-200 min-h-screen flex items-center justify-center p-6">
+
+    <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        <div class="bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-700">
+            <h2 class="text-2xl font-bold mb-6 text-emerald-400">Create New User</h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Email Address</label>
+                    <input type="email" id="createEmail" class="w-full bg-slate-900 border border-slate-600 rounded p-2 focus:border-emerald-500 focus:outline-none transition" placeholder="user@example.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Password</label>
+                    <input type="password" id="createPassword" class="w-full bg-slate-900 border border-slate-600 rounded p-2 focus:border-emerald-500 focus:outline-none transition" placeholder="******">
+                </div>
+                <button onclick="createUser()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                    Create User
+                </button>
+            </div>
+            <div id="createResult" class="mt-4 text-sm font-mono hidden"></div>
+        </div>
+
+        <div class="bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-700">
+            <h2 class="text-2xl font-bold mb-6 text-blue-400">Find User by ID</h2>
+
+            <div class="flex gap-2 mb-6">
+                <input type="number" id="searchId" class="flex-1 bg-slate-900 border border-slate-600 rounded p-2 focus:border-blue-500 focus:outline-none" placeholder="ID (e.g., 1)">
+                <button onclick="getUser()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                    Search
+                </button>
+            </div>
+
+            <div id="userCard" class="hidden border border-slate-600 rounded-lg p-4 bg-slate-900">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-gray-400 text-xs uppercase tracking-wider">User ID</span>
+                    <span id="displayId" class="font-mono text-blue-400"></span>
+                </div>
+                <div class="mb-4">
+                    <div class="text-xl font-semibold" id="displayEmail"></div>
+                </div>
+                <div class="inline-block px-2 py-1 rounded text-xs font-bold" id="displayStatus"></div>
+            </div>
+            <div id="searchError" class="mt-4 text-red-400 text-sm hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+
+        async function createUser() {
+            const email = document.getElementById('createEmail').value;
+            const password = document.getElementById('createPassword').value;
+            const resultDiv = document.getElementById('createResult');
+
+            try {
+                const response = await fetch(`${API_URL}/users/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                resultDiv.classList.remove('hidden');
+                if (response.ok) {
+                    resultDiv.className = "mt-4 text-sm font-mono text-emerald-400";
+                    resultDiv.innerText = `Success! User ID: ${data.id}`;
+                } else {
+                    resultDiv.className = "mt-4 text-sm font-mono text-red-400";
+                    resultDiv.innerText = `Error: ${data.detail}`;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Failed to connect to API. Is it running?");
+            }
+        }
+
+        async function getUser() {
+            const id = document.getElementById('searchId').value;
+            const card = document.getElementById('userCard');
+            const errorDiv = document.getElementById('searchError');
+
+            if (!id) return;
+
+            try {
+                const response = await fetch(`${API_URL}/users/${id}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    errorDiv.classList.add('hidden');
+                    card.classList.remove('hidden');
+
+                    document.getElementById('displayId').innerText = `#${data.id}`;
+                    document.getElementById('displayEmail').innerText = data.email;
+
+                    const statusEl = document.getElementById('displayStatus');
+                    if(data.is_active) {
+                        statusEl.innerText = "ACTIVE";
+                        statusEl.className = "inline-block px-2 py-1 rounded text-xs font-bold bg-emerald-900 text-emerald-300 border border-emerald-700";
+                    } else {
+                        statusEl.innerText = "INACTIVE";
+                        statusEl.className = "inline-block px-2 py-1 rounded text-xs font-bold bg-red-900 text-red-300 border border-red-700";
+                    }
+                } else {
+                    card.classList.add('hidden');
+                    errorDiv.classList.remove('hidden');
+                    errorDiv.innerText = data.detail || "User not found";
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Failed to connect to API.");
+            }
+        }
+    </script>
+</body>
+</html>

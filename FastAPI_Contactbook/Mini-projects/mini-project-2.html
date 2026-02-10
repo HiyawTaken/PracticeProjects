@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAT_COMPUTER // NOTES</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'JetBrains Mono', monospace; }
+        /* Custom Scrollbar for that tactical feel */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; }
+        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+        .glitch-text:hover { text-shadow: 2px 0 #b45309, -2px 0 #0ea5e9; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-300 min-h-screen p-6 selection:bg-amber-500 selection:text-black" x-data="notesApp()">
+
+    <div class="max-w-4xl mx-auto border-x border-zinc-800 min-h-screen px-6 bg-zinc-950/50">
+
+        <header class="py-8 border-b border-zinc-800 mb-8 flex justify-between items-end">
+            <div>
+                <h1 class="text-4xl font-bold text-white tracking-tighter uppercase glitch-text cursor-default">
+                    H_YAW<span class="text-amber-600">.SYS</span>
+                </h1>
+                <p class="text-xs text-zinc-500 mt-1 uppercase tracking-widest">Secure Local Storage // Protocol v1.0</p>
+            </div>
+            <div class="text-right">
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-zinc-700 text-xs text-amber-500 uppercase">
+                    <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+                    System Online
+                </div>
+            </div>
+        </header>
+
+        <div class="bg-zinc-900/50 p-6 border border-zinc-700 shadow-[0_0_15px_rgba(0,0,0,0.5)] mb-12 relative overflow-hidden group">
+            <div class="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-amber-600"></div>
+            <div class="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-amber-600"></div>
+            <div class="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-amber-600"></div>
+            <div class="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-amber-600"></div>
+
+            <div class="space-y-4 relative z-10">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-zinc-500 uppercase tracking-widest" x-text="isEditing ? '>> EDITING RECORD ID: ' + currentId : '>> NEW ENTRY'"></span>
+
+                    <button x-show="isEditing" @click="cancelEdit()"
+                            class="text-xs text-red-500 hover:text-red-400 uppercase tracking-widest hover:underline">
+                        [ CANCEL OVERRIDE ]
+                    </button>
+                </div>
+
+                <input x-model="form.title" type="text" placeholder="SUBJECT_LINE"
+                       class="w-full bg-black border border-zinc-700 text-white px-4 py-3 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 placeholder-zinc-700 transition-colors uppercase">
+
+                <textarea x-model="form.body" placeholder="ENTER_DATA..." rows="4"
+                          class="w-full bg-black border border-zinc-700 text-zinc-300 px-4 py-3 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 placeholder-zinc-700 transition-colors"></textarea>
+
+                <button @click="submit()"
+                        class="w-full font-bold py-3 uppercase tracking-widest transition-all duration-200 border border-transparent"
+                        :class="isEditing ? 'bg-amber-700 hover:bg-amber-600 text-white' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white border-zinc-700'">
+                    <span x-text="isEditing ? 'Execute Update' : 'Initialize Record'"></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="grid gap-4">
+            <template x-for="note in notes" :key="note.id">
+                <div class="group relative bg-zinc-900 border-l-2 border-zinc-700 p-5 hover:border-amber-600 hover:bg-zinc-800/80 transition-all duration-300">
+
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-lg font-bold text-white uppercase tracking-tight" x-text="note.title"></h3>
+                        <span class="text-[10px] text-zinc-600 font-mono border border-zinc-800 px-1" x-text="'REF-' + note.id"></span>
+                    </div>
+
+                    <p class="text-sm text-zinc-400 leading-relaxed font-light whitespace-pre-wrap mb-6" x-text="note.body"></p>
+
+                    <div class="flex justify-between items-end border-t border-zinc-800 pt-3">
+                        <span class="text-xs text-zinc-600" x-text="formatDate(note.created_at)"></span>
+
+                        <div class="flex gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                            <button @click="startEdit(note)" class="text-xs uppercase font-bold text-amber-600 hover:text-amber-400 tracking-wider">
+                                [ EDIT ]
+                            </button>
+                            <button @click="deleteNote(note.id)" class="text-xs uppercase font-bold text-zinc-500 hover:text-red-500 tracking-wider ml-2">
+                                [ PURGE ]
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div x-show="notes.length === 0" class="text-center py-20 border-2 border-dashed border-zinc-800 mt-8">
+            <p class="text-zinc-600 uppercase tracking-widest text-sm">Database Empty // Awaiting Input</p>
+        </div>
+
+    </div>
+
+    <script>
+        function notesApp() {
+            return {
+                notes: [],
+                form: { title: '', body: '' },
+                isEditing: false,
+                currentId: null,
+
+                init() {
+                    this.fetchNotes();
+                },
+
+                async fetchNotes() {
+                    const res = await fetch('/notes');
+                    this.notes = await res.json();
+                    this.notes.reverse(); // Newest first
+                },
+
+                async submit() {
+                    if (!this.form.title || !this.form.body) return;
+
+                    if (this.isEditing) {
+                        // UPDATE (PUT)
+                        await fetch(`/notes/${this.currentId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.form)
+                        });
+                    } else {
+                        // CREATE (POST)
+                        await fetch('/notes', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.form)
+                        });
+                    }
+
+                    this.cancelEdit(); // Reset form
+                    this.fetchNotes(); // Refresh list
+                },
+
+                startEdit(note) {
+                    this.isEditing = true;
+                    this.currentId = note.id;
+                    // Copy note data into form
+                    this.form = { title: note.title, body: note.body };
+                    // Scroll to top
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
+
+                cancelEdit() {
+                    this.isEditing = false;
+                    this.currentId = null;
+                    this.form = { title: '', body: '' };
+                },
+
+                async deleteNote(id) {
+                    if(!confirm('CONFIRM PURGE?')) return;
+                    await fetch(`/notes/${id}`, { method: 'DELETE' });
+                    this.fetchNotes();
+                },
+
+                formatDate(dateString) {
+                    const d = new Date(dateString);
+                    // Military format
+                    return d.getFullYear() + '.' +
+                           String(d.getMonth() + 1).padStart(2, '0') + '.' +
+                           String(d.getDate()).padStart(2, '0') + ' // ' +
+                           String(d.getHours()).padStart(2, '0') + ':' +
+                           String(d.getMinutes()).padStart(2, '0');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

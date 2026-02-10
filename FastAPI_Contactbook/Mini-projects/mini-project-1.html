@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Workout Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px 0;
+        }
+        .workout {
+            border: 1px solid #ccc;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+        }
+        .row {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Workout Tracker</h1>
+
+<h2>Create Workout</h2>
+<div>
+    <label>Date:</label><br>
+    <input type="date" id="date"><br>
+
+    <label>Exercise:</label><br>
+    <input type="text" id="exercise"><br>
+
+    <label>Sets:</label><br>
+    <input type="number" id="sets" min="1"><br>
+
+    <label>Reps:</label><br>
+    <input type="number" id="reps" min="1"><br>
+
+    <label>Weight:</label><br>
+    <input type="number" id="weight" min="0" step="0.1"><br>
+
+    <button onclick="createWorkout()">Add Workout</button>
+</div>
+
+<hr>
+
+<h2>All Workouts</h2>
+<div id="workout-list"></div>
+
+<script>
+const API = "http://localhost:8000/workouts";
+
+async function createWorkout() {
+    const workout = {
+        date: document.getElementById("date").value,
+        exercise: document.getElementById("exercise").value,
+        sets: Number(document.getElementById("sets").value),
+        reps: Number(document.getElementById("reps").value),
+        weight: Number(document.getElementById("weight").value)
+    };
+
+    const res = await fetch(API, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(workout)
+    });
+
+    if (!res.ok) {
+        alert("Error creating workout");
+        return;
+    }
+
+    loadWorkouts();
+}
+
+async function loadWorkouts() {
+    const res = await fetch(API);
+    const data = await res.json();
+
+    const list = document.getElementById("workout-list");
+    list.innerHTML = "";
+
+    data.forEach(w => {
+        const div = document.createElement("div");
+        div.className = "workout";
+
+        div.innerHTML = `
+            <strong>ID:</strong> ${w.id}<br>
+            <strong>Date:</strong> ${w.date}<br>
+            <strong>Exercise:</strong> ${w.exercise}<br>
+            <strong>Sets:</strong> ${w.sets}<br>
+            <strong>Reps:</strong> ${w.reps}<br>
+            <strong>Weight:</strong> ${w.weight}<br><br>
+
+            <button onclick="deleteWorkout(${w.id})">Delete</button>
+            <button onclick="showUpdateForm(${w.id})">Update</button>
+
+            <div id="update-${w.id}" style="display:none; margin-top:10px;">
+                <h4>Update Workout</h4>
+                <input type="date" id="u-date-${w.id}" value="${w.date}"><br>
+                <input type="text" id="u-exercise-${w.id}" value="${w.exercise}"><br>
+                <input type="number" id="u-sets-${w.id}" value="${w.sets}"><br>
+                <input type="number" id="u-reps-${w.id}" value="${w.reps}"><br>
+                <input type="number" id="u-weight-${w.id}" value="${w.weight}"><br>
+                <button onclick="updateWorkout(${w.id})">Save</button>
+            </div>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
+function showUpdateForm(id) {
+    const form = document.getElementById(`update-${id}`);
+    form.style.display = form.style.display === "none" ? "block" : "none";
+}
+
+async function updateWorkout(id) {
+    const updated = {
+        date: document.getElementById(`u-date-${id}`).value,
+        exercise: document.getElementById(`u-exercise-${id}`).value,
+        sets: Number(document.getElementById(`u-sets-${id}`).value),
+        reps: Number(document.getElementById(`u-reps-${id}`).value),
+        weight: Number(document.getElementById(`u-weight-${id}`).value)
+    };
+
+    const res = await fetch(`${API}/${id}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(updated)
+    });
+
+    if (!res.ok) {
+        alert("Error updating workout");
+        return;
+    }
+
+    loadWorkouts();
+}
+
+async function deleteWorkout(id) {
+    await fetch(`${API}/${id}`, { method: "DELETE" });
+    loadWorkouts();
+}
+
+loadWorkouts();
+</script>
+
+</body>
+</html>
