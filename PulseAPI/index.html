@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseAPI // MONITOR</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --term-green: #0f0;
+            --term-dim: #004400;
+            --term-red: #ff3333;
+            --term-yellow: #ffcc00;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--term-green);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            text-shadow: 0 0 5px var(--term-green);
+        }
+
+        /* Scanline Overlay */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 100;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        h1 {
+            border-bottom: 2px solid var(--term-green);
+            padding-bottom: 10px;
+            margin-top: 0;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        /* Controls */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 150px;
+            gap: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--term-dim);
+            padding: 15px;
+            flex-shrink: 0;
+        }
+
+        input {
+            background: black;
+            border: 1px solid var(--term-green);
+            color: var(--term-green);
+            padding: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        input:focus { outline: none; box-shadow: 0 0 10px var(--term-green); }
+
+        button {
+            background: black;
+            border: 1px solid var(--term-green);
+            color: var(--term-green);
+            padding: 10px;
+            cursor: pointer;
+            font-family: inherit;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: all 0.1s;
+        }
+        button:hover { background: var(--term-green); color: black; }
+
+        /* Button Variants */
+        .btn-red { border-color: var(--term-red); color: var(--term-red); }
+        .btn-red:hover { background: var(--term-red); color: black; }
+
+        .btn-yellow { border-color: var(--term-yellow); color: var(--term-yellow); }
+        .btn-yellow:hover { background: var(--term-yellow); color: black; }
+
+        .btn-scan {
+            width: 100%;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+            flex-shrink: 0;
+        }
+
+        /* LAYOUT ADJUSTMENT */
+        .table-container {
+            border: 1px solid var(--term-dim);
+            margin-bottom: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid var(--term-dim); padding: 12px; text-align: left; }
+        th { background-color: var(--term-dim); color: var(--term-green); position: sticky; top: 0; }
+        tr:hover { background-color: rgba(0, 255, 0, 0.1); }
+
+        .status-up { color: var(--term-green); font-weight: bold; }
+        .status-down { color: var(--term-red); font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        /* Console */
+        #console-log {
+            border: 1px dashed var(--term-dim);
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            color: #888;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+        .log-entry { margin: 2px 0; font-family: monospace; }
+        .error-msg { color: var(--term-red); }
+
+        .editing {
+            border-color: var(--term-yellow) !important;
+            box-shadow: 0 0 10px var(--term-yellow);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>PulseAPI // System Monitor</h1>
+
+    <div class="controls">
+        <input type="hidden" id="editId">
+        <input type="text" id="targetName" placeholder="NAME (e.g. Google)">
+        <input type="text" id="targetUrl" placeholder="URL (google.com)">
+        <input type="text" id="searchInput" placeholder="SEARCH PROTOCOL..." onkeyup="searchTargets()">
+        <button id="actionBtn" onclick="handleAction()">INIT</button>
+    </div>
+
+    <button class="btn-scan" id="scanBtn" onclick="runScan()">EXECUTE SYSTEM SCAN</button>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>TARGET</th>
+                    <th>URI</th>
+                    <th>STATUS</th>
+                    <th>LAST_PING</th>
+                    <th>ACTION</th>
+                </tr>
+            </thead>
+            <tbody id="targetTable">
+                </tbody>
+        </table>
+    </div>
+
+    <div id="console-log">
+        <div class="log-entry">> SYSTEM READY.</div>
+    </div>
+
+<script>
+    const API_URL = "http://127.0.0.1:8000";
+
+    function log(message, isError = false) {
+        const consoleDiv = document.getElementById('console-log');
+        const timestamp = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = isError ? 'log-entry error-msg' : 'log-entry';
+        entry.innerText = `[${timestamp}] > ${message}`;
+        consoleDiv.prepend(entry);
+    }
+
+    function fixUrl(url) {
+        url = url.trim();
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            return 'https://' + url;
+        }
+        return url;
+    }
+
+    // --- FETCH & RENDER ---
+    async function fetchTargets() {
+        try {
+            const response = await fetch(`${API_URL}/targets`);
+            const data = await response.json();
+            renderTable(data);
+        } catch (error) {
+            log(`CONNECTION FAILED: ${error.message}`, true);
+        }
+    }
+
+    // --- SEARCH (DEBOUNCED) ---
+    let searchTimeout = null;
+    async function searchTargets() {
+        if (searchTimeout) clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+            const query = document.getElementById('searchInput').value;
+            if (!query) { fetchTargets(); return; }
+            try {
+                const response = await fetch(`${API_URL}/targets/search?name=${query}`);
+                const data = await response.json();
+                renderTable(data);
+            } catch (error) { log(`SEARCH ERROR: ${error.message}`, true); }
+        }, 1500);
+    }
+
+    // --- RENDER TABLE (FIXED LOGIC HERE) ---
+    function renderTable(data) {
+        const tbody = document.getElementById('targetTable');
+        tbody.innerHTML = '';
+
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#555;">NO DATA</td></tr>';
+            return;
+        }
+
+        data.forEach(t => {
+            const tr = document.createElement('tr');
+
+            // 1. Determine Class (Green for 2xx, Red for everything else)
+            let statusClass = (t.status_code >= 200 && t.status_code < 300) ? 'status-up' : 'status-down';
+
+            // 2. Determine Text
+            let statusText = 'OFFLINE';
+            if (t.status_code >= 200 && t.status_code < 300) {
+                statusText = `ONLINE [${t.status_code}]`;
+            } else if (t.status_code === 0 || t.status_code === null) {
+                statusText = 'NO SIGNAL';
+            } else {
+                // This covers 404, 500, 403, etc.
+                statusText = `ERR [${t.status_code}]`;
+            }
+
+            const time = t.last_checked ? new Date(t.last_checked).toLocaleTimeString() : 'NEVER';
+
+            tr.innerHTML = `
+                <td>#${t.id}</td>
+                <td>${t.name}</td>
+                <td style="font-size: 0.8em; opacity: 0.7;">${t.url}</td>
+                <td class="${statusClass}">${statusText}</td>
+                <td>${time}</td>
+                <td>
+                    <button class="btn-yellow" onclick="startEdit(${t.id}, '${t.name}', '${t.url}')" style="padding: 5px 10px; margin-right:5px; font-size: 0.8em;">EDIT</button>
+                    <button class="btn-red" onclick="deleteTarget(${t.id})" style="padding: 5px 10px; font-size: 0.8em;">KILL</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // --- HANDLE ACTION ---
+    function handleAction() {
+        const id = document.getElementById('editId').value;
+        if (id) { updateTarget(id); } else { addTarget(); }
+    }
+
+    // --- ADD TARGET ---
+    async function addTarget() {
+        const name = document.getElementById('targetName').value;
+        let url = fixUrl(document.getElementById('targetUrl').value);
+        if (!name || !url) return log("MISSING FIELDS", true);
+
+        try {
+            const res = await fetch(`${API_URL}/targets`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, url })
+            });
+            if (res.ok) {
+                log(`TARGET INITIALIZED: ${name}`);
+                clearForm();
+                fetchTargets();
+            } else {
+                const err = await res.json();
+                log(`ERROR: ${err.detail}`, true);
+            }
+        } catch (e) { log(`FAIL: ${e.message}`, true); }
+    }
+
+    // --- EDIT MODE START ---
+    function startEdit(id, name, url) {
+        document.getElementById('editId').value = id;
+        document.getElementById('targetName').value = name;
+        document.getElementById('targetUrl').value = url;
+
+        const btn = document.getElementById('actionBtn');
+        btn.innerText = "UPDATE";
+        btn.classList.add("btn-yellow");
+
+        document.getElementById('targetName').classList.add("editing");
+        document.getElementById('targetUrl').classList.add("editing");
+        log(`EDIT MODE ENGAGED FOR TARGET #${id}`);
+    }
+
+    // --- UPDATE TARGET ---
+    async function updateTarget(id) {
+        const name = document.getElementById('targetName').value;
+        let url = fixUrl(document.getElementById('targetUrl').value);
+
+        try {
+            const res = await fetch(`${API_URL}/targets/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, url })
+            });
+            if (res.ok) {
+                log(`TARGET #${id} UPDATED SUCCESSFULLY`);
+                clearForm();
+                fetchTargets();
+            } else {
+                log("UPDATE FAILED", true);
+            }
+        } catch (e) { log(`FAIL: ${e.message}`, true); }
+    }
+
+    // --- RESET FORM ---
+    function clearForm() {
+        document.getElementById('editId').value = '';
+        document.getElementById('targetName').value = '';
+        document.getElementById('targetUrl').value = '';
+        document.getElementById('targetName').classList.remove("editing");
+        document.getElementById('targetUrl').classList.remove("editing");
+
+        const btn = document.getElementById('actionBtn');
+        btn.innerText = "INIT";
+        btn.classList.remove("btn-yellow");
+    }
+
+    // --- SCAN ---
+    async function runScan() {
+        const btn = document.getElementById('scanBtn');
+        btn.innerText = "SCANNING...";
+        log("SCAN INITIATED...");
+        try {
+            const res = await fetch(`${API_URL}/scan`, { method: 'POST' });
+            const data = await res.json();
+            log(data.message.toUpperCase());
+            fetchTargets();
+        } catch (e) { log("SCAN ERROR", true); }
+        finally { btn.innerText = "EXECUTE SYSTEM SCAN"; }
+    }
+
+    // --- DELETE ---
+    async function deleteTarget(id) {
+        if(!confirm(`TERMINATE TARGET #${id}?`)) return;
+        try {
+            await fetch(`${API_URL}/targets/${id}`, { method: 'DELETE' });
+            log(`TARGET #${id} DELETED`);
+            fetchTargets();
+        } catch (e) { log("DELETE ERROR", true); }
+    }
+
+    fetchTargets();
+    setInterval(fetchTargets, 30000);
+</script>
+</body>
+</html>
