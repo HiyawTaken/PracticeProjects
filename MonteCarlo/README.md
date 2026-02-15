@@ -10,9 +10,11 @@ Additionally, I integrated Matplotlib to visualize the "fan" of possibilities an
 
 How to Run:
 
-1. Start the Simulator
+1. Install Dependencies
+        pip install -r requirements.txt
+2. Start the Simulator
      python main.py
-2. Configure Simulation
+3. Configure Simulation
 Load your cryptocurrency `.csv`, enter the number of days to forecast, and set the number of trials (e.g., 10,000).
 3. Analyze Results
 The script will generate a path chart showing the predicted mean and a histogram identifying the 5% probability "worst-case" price target.
