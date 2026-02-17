@@ -11,12 +11,19 @@ Additionally, I integrated Matplotlib to visualize the "fan" of possibilities an
 How to Run:
 
 1. Install Dependencies
+
         pip install -r requirements.txt
 2. Start the Simulator
-     python main.py
-3. Configure Simulation
-Load your cryptocurrency `.csv`, enter the number of days to forecast, and set the number of trials (e.g., 10,000).
-3. Analyze Results
-The script will generate a path chart showing the predicted mean and a histogram identifying the 5% probability "worst-case" price target.
 
-P.S: This is my first time using vectorization, so the jump from nested loops to a vectorized matrix approach was a memorizing to say the least.
+         python MonteCarloGBM.py or python MonteCarloHeston.py
+
+
+3. Configure Simulation
+
+    Load your cryptocurrency `.csv`, enter the number of days to forecast, and set the number of trials (e.g., 10,000).
+
+4. Analyze Results
+
+    The script will generate a path chart showing the predicted mean and a histogram identifying the 5% probability "worst-case" price target.
+
+P.S: This is my first time using vectorization, so the jump from nested loops to a vectorized matrix approach was a mesmerizing to say the least.
