@@ -1,0 +1,1 @@
+These are implementaions of Linear Regression, Locally weighted Regression and Logistic Regression from Scratch. With some helper scripts.

@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cat or Dog?</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f0e8;
+    --warm-white: #faf8f3;
+    --ink: #1a1410;
+    --cat-orange: #c4622d;
+    --cat-amber: #e8935a;
+    --cat-pale: #f2dcc8;
+    --cat-dark: #7a3520;
+    --stripe1: #d4a574;
+    --stripe2: #b8836a;
+    --shadow: rgba(26,20,16,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--cream);
+    color: var(--ink);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 32px;
+    height: 32px;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.08s ease;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(196,98,45,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(232,147,90,0.08) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 60px 40px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 80px;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .logo {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .logo-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--cat-orange);
+    margin-bottom: 4px;
+  }
+
+  .logo-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--ink);
+  }
+
+  .logo-title em {
+    font-style: italic;
+    color: var(--cat-orange);
+  }
+
+  .header-decoration {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding-top: 8px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--cat-orange);
+    opacity: 0.3;
+  }
+  .dot:nth-child(2) { opacity: 0.6; }
+  .dot:nth-child(3) { opacity: 1; }
+
+  /* Main layout */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  /* Upload zone */
+  .upload-section {
+    animation: fadeUp 0.8s ease 0.1s both;
+  }
+
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--cat-orange);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--cat-orange);
+    opacity: 0.3;
+  }
+
+  .drop-zone {
+    border: 1.5px dashed var(--stripe2);
+    border-radius: 4px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: none;
+    transition: all 0.3s ease;
+    background: var(--warm-white);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(196,98,45,0.04) 100%);
+    pointer-events: none;
+  }
+
+  .drop-zone:hover, .drop-zone.dragging {
+    border-color: var(--cat-orange);
+    background: rgba(196,98,45,0.04);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px var(--shadow);
+  }
+
+  .drop-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+
+  .drop-zone:hover .drop-icon {
+    transform: scale(1.1) rotate(-5deg);
+  }
+
+  .drop-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .drop-sub {
+    font-size: 11px;
+    color: var(--stripe2);
+    letter-spacing: 0.05em;
+  }
+
+  #fileInput { display: none; }
+
+  /* Preview */
+  .preview-container {
+    margin-top: 20px;
+    display: none;
+    position: relative;
+  }
+
+  .preview-container.visible { display: block; }
+
+  .preview-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 4px;
+    display: block;
+  }
+
+  .preview-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(26,20,16,0.6) 0%, transparent 50%);
+    border-radius: 4px;
+    display: flex;
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .preview-filename {
+    font-size: 10px;
+    color: var(--cream);
+    letter-spacing: 0.1em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Analyze button */
+  .btn-analyze {
+    width: 100%;
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--ink);
+    color: var(--cream);
+    border: none;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: none;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    display: none;
+  }
+
+  .btn-analyze.visible { display: block; }
+
+  .btn-analyze::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--cat-orange);
+    transform: translateX(-100%);
+    transition: transform 0.4s ease;
+  }
+
+  .btn-analyze:hover::before { transform: translateX(0); }
+  .btn-analyze span { position: relative; z-index: 1; }
+
+  .btn-analyze:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* Results section */
+  .results-section {
+    animation: fadeUp 0.8s ease 0.2s both;
+  }
+
+  .result-card {
+    background: var(--warm-white);
+    border: 1px solid rgba(196,98,45,0.15);
+    border-radius: 4px;
+    padding: 32px;
+    min-height: 340px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--cat-orange), var(--cat-amber));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.6s ease;
+  }
+
+  .result-card.has-result::after { transform: scaleX(1); }
+
+  .idle-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    opacity: 0.4;
+  }
+
+  .idle-cat {
+    font-size: 56px;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .idle-text {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink);
+  }
+
+  /* Loading */
+  .loading-state {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .loading-state.visible { display: flex; }
+  .idle-state.hidden { display: none; }
+
+  .paw-loader {
+    display: flex;
+    gap: 8px;
+  }
+
+  .paw {
+    font-size: 20px;
+    animation: pawBounce 0.8s ease infinite;
+  }
+  .paw:nth-child(2) { animation-delay: 0.15s; }
+  .paw:nth-child(3) { animation-delay: 0.3s; }
+
+  .loading-text {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--cat-orange);
+  }
+
+  /* Result display */
+  .result-display {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+  }
+
+  .result-display.visible { display: flex; }
+
+  .result-emoji {
+    font-size: 72px;
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  .result-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--ink);
+    animation: fadeUp 0.4s ease 0.1s both;
+  }
+
+  .result-label.cat { color: var(--cat-orange); }
+
+  /* Probability bar */
+  .prob-section {
+    width: 100%;
+    animation: fadeUp 0.4s ease 0.2s both;
+  }
+
+  .prob-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .prob-bar-track {
+    height: 6px;
+    background: rgba(196,98,45,0.15);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .prob-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cat-orange), var(--cat-amber));
+    border-radius: 3px;
+    width: 0%;
+    transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .prob-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--cat-orange);
+    margin-top: 8px;
+    animation: fadeUp 0.4s ease 0.3s both;
+  }
+
+  .prob-label {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--stripe2);
+    margin-top: 4px;
+  }
+
+  /* Error */
+  .error-state {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: var(--cat-dark);
+  }
+  .error-state.visible { display: flex; }
+  .error-emoji { font-size: 48px; }
+  .error-msg { font-size: 12px; letter-spacing: 0.05em; }
+
+  /* Stats strip */
+  .stats-strip {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: rgba(196,98,45,0.15);
+    border: 1px solid rgba(196,98,45,0.15);
+    border-radius: 4px;
+    overflow: hidden;
+    animation: fadeUp 0.8s ease 0.3s both;
+  }
+
+  .stat-cell {
+    background: var(--warm-white);
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cat-orange);
+  }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--stripe2);
+    margin-top: 4px;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(196,98,45,0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--stripe2);
+    animation: fadeUp 0.8s ease 0.4s both;
+  }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  @keyframes pawBounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-8px) scale(1.2); }
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0) rotate(-10deg); opacity: 0; }
+    to { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  /* Responsive */
+  @media (max-width: 680px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .page { padding: 40px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor">🐾</div>
+
+<div class="page">
+  <header>
+    <div class="logo">
+      <span class="logo-eyebrow">Logistic Regression Classifier</span>
+      <h1 class="logo-title">Cat <em>or</em> Dog?</h1>
+    </div>
+    <div class="header-decoration">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- Upload -->
+    <div class="upload-section">
+      <div class="section-label">Upload Image</div>
+      <div class="drop-zone" id="dropZone">
+        <span class="drop-icon">🐈</span>
+        <div class="drop-text">Drop your image here</div>
+        <div class="drop-sub">or click to browse — jpg, png, webp</div>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+
+      <div class="preview-container" id="previewContainer">
+        <img class="preview-img" id="previewImg" src="" alt="Preview">
+        <div class="preview-overlay">
+          <span class="preview-filename" id="previewFilename"></span>
+        </div>
+      </div>
+
+      <button class="btn-analyze" id="analyzeBtn">
+        <span>Analyse →</span>
+      </button>
+    </div>
+
+    <!-- Results -->
+    <div class="results-section">
+      <div class="section-label">Analysis</div>
+      <div class="result-card" id="resultCard">
+
+        <div class="idle-state" id="idleState">
+          <div class="idle-cat">🐾</div>
+          <div class="idle-text">awaiting specimen…</div>
+        </div>
+
+        <div class="loading-state" id="loadingState">
+          <div class="paw-loader">
+            <span class="paw">🐾</span>
+            <span class="paw">🐾</span>
+            <span class="paw">🐾</span>
+          </div>
+          <div class="loading-text">Analysing…</div>
+        </div>
+
+        <div class="result-display" id="resultDisplay">
+          <div class="result-emoji" id="resultEmoji"></div>
+          <div class="result-label" id="resultLabel"></div>
+          <div class="prob-section">
+            <div class="prob-header">
+              <span>confidence</span>
+              <span id="probPercent">0%</span>
+            </div>
+            <div class="prob-bar-track">
+              <div class="prob-bar-fill" id="probBar"></div>
+            </div>
+          </div>
+          <div class="prob-value" id="probValue"></div>
+          <div class="prob-label">probability score</div>
+        </div>
+
+        <div class="error-state" id="errorState">
+          <div class="error-emoji">😿</div>
+          <div class="error-msg" id="errorMsg">Something went wrong.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-strip">
+    <div class="stat-cell">
+      <div class="stat-value">25k</div>
+      <div class="stat-label">Training Images</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-value">68%</div>
+      <div class="stat-label">Accuracy</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-value">4096</div>
+      <div class="stat-label">Pixel Features</div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Logistic Regression · Raw Pixels · CuPy GPU</span>
+    <span>🐈 · 🐕</span>
+  </footer>
+</div>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+  });
+
+  // Elements
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const previewContainer = document.getElementById('previewContainer');
+  const previewImg = document.getElementById('previewImg');
+  const previewFilename = document.getElementById('previewFilename');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const resultCard = document.getElementById('resultCard');
+  const idleState = document.getElementById('idleState');
+  const loadingState = document.getElementById('loadingState');
+  const resultDisplay = document.getElementById('resultDisplay');
+  const errorState = document.getElementById('errorState');
+
+  let selectedFile = null;
+
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragging');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragging');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) handleFile(file);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src = e.target.result;
+      previewFilename.textContent = file.name;
+      previewContainer.classList.add('visible');
+      analyzeBtn.classList.add('visible');
+    };
+    reader.readAsDataURL(file);
+    resetResult();
+  }
+
+  function resetResult() {
+    resultCard.classList.remove('has-result');
+    idleState.classList.remove('hidden');
+    resultDisplay.classList.remove('visible');
+    errorState.classList.remove('visible');
+    loadingState.classList.remove('visible');
+  }
+
+  function showLoading() {
+    idleState.classList.add('hidden');
+    loadingState.classList.add('visible');
+    resultDisplay.classList.remove('visible');
+    errorState.classList.remove('visible');
+  }
+
+  function showResult(data) {
+    loadingState.classList.remove('visible');
+    resultDisplay.classList.add('visible');
+    resultCard.classList.add('has-result');
+
+    const isCat = data.label === 1;
+    document.getElementById('resultEmoji').textContent = isCat ? '🐈' : '🐕';
+    const labelEl = document.getElementById('resultLabel');
+    labelEl.textContent = isCat ? 'Cat' : 'Dog';
+    labelEl.className = 'result-label ' + (isCat ? 'cat' : '');
+
+    const prob = data.probability;
+    const displayProb = isCat ? prob : (1 - prob);
+    const pct = Math.round(displayProb * 100);
+
+    document.getElementById('probPercent').textContent = pct + '%';
+    document.getElementById('probValue').textContent = displayProb.toFixed(4);
+
+    setTimeout(() => {
+      document.getElementById('probBar').style.width = pct + '%';
+    }, 100);
+  }
+
+  function showError(msg) {
+    loadingState.classList.remove('visible');
+    errorState.classList.add('visible');
+    document.getElementById('errorMsg').textContent = msg;
+  }
+
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    analyzeBtn.disabled = true;
+    showLoading();
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res = await fetch('http://localhost:8000/predict', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        showError(err.detail || 'Server error.');
+      } else {
+        const data = await res.json();
+        showResult(data);
+      }
+    } catch (e) {
+      showError('Could not reach server. Is FastAPI running?');
+    } finally {
+      analyzeBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

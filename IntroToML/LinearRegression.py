@@ -16,15 +16,15 @@ house_price = [(x - house_price_mean) / house_price_std for x in house_price]
 theta_1 = 0
 theta_0 = 0
 
-learning_rate = 0.01
+learning_rate = 0.001
 cost_function = 30
-max_iterations = 10000
+max_iterations = 100000
 iteration = 0
 
 def approx_value(theta0,theta1, x1):
     return theta0 + theta1 * x1
 
-while cost_function > 0.0001 and iteration < max_iterations:
+while cost_function > 0.0000000001 and iteration < max_iterations:
     sum_of_training_data_partial_derivatives_squared = sum((approx_value(theta_0, theta_1, house_size[x]) - house_price[x])**2 for x in range(0, len(house_size)))
     sum_of_training_data_partial_derivatives_1 = sum((approx_value(theta_0, theta_1, house_size[x]) - house_price[x]) * house_size[x] for x in range(0, len(house_size)))
     sum_of_training_data_partial_derivatives_0 = sum((approx_value(theta_0, theta_1, house_size[x]) - house_price[x]) for x in range(0, len(house_size)))
